@@ -93,7 +93,11 @@ Personally, I use [VSCode with the Calva Extension](https://clojure.org/guides/e
 
 ## 2. Setup GitHub Actions
 
-Now that we have a basic project set up, let's setup some basic GitHub actions. To start with, let's add a workflow to run tests everytime we push to master. Create a file `.github/workflows/test.yaml`:
+Now that we have a basic project set up, let's setup some basic GitHub actions.
+
+### 2.1 Test on Push
+
+To start with, let's add a workflow to run tests everytime we push to master. Create a file `.github/workflows/test.yaml`:
 ```yaml
 name: Test 🧪
 
@@ -115,4 +119,30 @@ jobs:
           cli: 1.11.1.1208
       - name: Run Tests
         run: clojure -X:test-runner
+```
+
+### 2.2 Manual Trigger
+
+It might be useful to trigger jobs manually. Let's add a workflow that we can trigger from the GitHub UI which outputs our `hello world`. Create a file `.github/workflow/manual.yaml`:
+```yaml
+name: Manual 🏃
+
+on: [workflow_dispatch]
+
+jobs:
+  manual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Prepare Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Prepare Clojure
+        uses: DeLaGuardo/setup-clojure@10.1
+        with:
+          cli: 1.11.1.1208
+      - name: Run
+        run: clojure -X core/run
 ```
