@@ -1,9 +1,14 @@
-name: Manual 🏃
+name: Ted Talk Transcript 🏃
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+    inputs:
+      talk_title:
+        description: Title of the TED Talk
+        required: true
 
 jobs:
-  manual:
+  ted-talk-transcript:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -19,4 +24,4 @@ jobs:
       - name: Run
         env:
           IFTT_API_KEY: ${{ secrets.IFTT_API_KEY }}
-        run: clojure -X core/run :job ted-talk-transcript :input '"A Socialist Perspective on the Pursuit of Happiness | Aaron Bastani | TED"'
+        run: clojure -X core/run :job ted-talk-transcript :input '"${{ github.event.inputs.talk_title }}"'
