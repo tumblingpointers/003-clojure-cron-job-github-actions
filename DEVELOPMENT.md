@@ -34,6 +34,7 @@ rm ./linux-install-1.11.1.1208.sh
 So far we have defined our dependencies (just Clojure for now) and two [aliases](https://practical.li/blog-staging/posts/clojure-cli-tools-understanding-aliases) which will come in handy during development and tests. `dev` alias helps us load the `test` directory during development and `test-runner` helps us run all the tests in our project.
 
 3. Time to add some code. Let's start with `src/core.clj`:
+
 ```clj
 (ns core)
 
@@ -45,6 +46,7 @@ So far we have defined our dependencies (just Clojure for now) and two [aliases]
 ```
 
 And now a basic test `test/core_test.clj`:
+
 ```clj
 (ns core-test
   (:require [clojure.test :refer [is deftest]]
@@ -55,6 +57,7 @@ And now a basic test `test/core_test.clj`:
 ```
 
 To test that everything above works properly try the following two commands:
+
 ```clj
 clj -X:test-runner
 ; ...
@@ -68,7 +71,6 @@ clj -X core/run
 
 Personally, I use [VSCode with the Calva Extension](https://clojure.org/guides/editors#_vs_code_rapidly_evolving_beginner_friendly) for local development but you can have your pick from the several options [suggested here](https://clojure.org/guides/editors).
 
-
 ## 2. Setup GitHub Actions
 
 Now that we have a basic project set up, let's setup some basic GitHub actions.
@@ -76,6 +78,7 @@ Now that we have a basic project set up, let's setup some basic GitHub actions.
 ### 2.1 Test on Push
 
 To start with, let's add a workflow to run tests everytime we push to master. Create a file `.github/workflows/test.yaml`:
+
 ```yaml
 name: Test 🧪
 
@@ -102,6 +105,7 @@ jobs:
 ### 2.2 Manual Trigger
 
 It might be useful to trigger jobs manually. Let's add a workflow that we can trigger from the GitHub UI which outputs our `hello world`. Create a file `.github/workflow/manual.yaml`:
+
 ```yaml
 name: Manual 🏃
 
