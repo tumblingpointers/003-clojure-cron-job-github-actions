@@ -1,10 +1,11 @@
 # Getting hands dirty with Clojure, GitHub Actions and IFTTT Webhooks for Personal Automation
 
 As a software engineer, I cannot help but think of making my life more efficient. These are a few recent ideas I have had:
-  - As my salary arrives, transfer it to different accounts based on a pre-set allocation
-  - Turn the heater on or off depending on the room temperature
-  - Update workout plans with new weights according to a progression plan
-  - Send me tweets with more than 100 likes from last week from people I follow
+
+- As my salary arrives, transfer it to different accounts based on a pre-set allocation
+- Turn the heater on or off depending on the room temperature
+- Update workout plans with new weights according to a progression plan
+- Send me tweets with more than 100 likes from last week from people I follow
 
 When it comes to actually implementing these ideas, the choice is to either use existing automation tools like [IFTTT](https://ifttt.com/) or write my own scripts. Tools like IFTTT are great because they are easy to use and well-integrated with thousands of [services](https://ifttt.com/explore/services) but they lack the flexibility you can achieve with your own code - maybe you want to process data in a certain way or talk to an unsupported API?
 
@@ -57,21 +58,19 @@ All this to say that there is a solution: [GitHub Actions](https://github.com/fe
 
 If you haven't heard of it or [similar solutions](https://docs.gitlab.com/ee/ci/pipelines/) before, these are workflows that run in your `git` repository and can be [triggered](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows) in all sorts of ways. Common usecases involve testing, building and deploying code but the possibilities are endless.
 
-All we need to do is write a `workflow` which starts when `https://api.github.com/repos/tumblingpointers/003-clojure-cron-job-github-actions/actions/workflows/{workflow-id}/dispatches` is hit. Inside the workflow, we can run our custom code and hit IFTTT when we are done.
+All we need to do is write a `workflow` which starts when `https://api.github.com/***/workflows/{workflow-id}` is hit. Inside the workflow, we can run our code and hit IFTTT when we are done.
 
 For personal use, the [usage limits](https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions#included-storage-and-minutes) are more than enough so we essentially have an easy way of running our code for free. 🥳
 
 ## Back to TED
 
-Let's get our hands dirty and actually code it out. We will start with the custom code as we need a workflow url before we can ask IFTTT to hit it.
+Let's get our hands dirty and actually code it out. We need a workflow url before we can ask IFTTT to hit it so let's get the code done first. For this part, you can use any language you want - I prefer Clojure as it's concise and a [delight to use](https://itrevolution.com/articles/love-letter-to-clojure-part-1/).
 
-We can use any language we want for this part - personally I prefer Clojure for scripts as it's concise and a delight to use.
-
-I won't go into a lot of details but these are the key parts:
+Feel free to go through the repository yourself but these are the major parts:
 
 ### 1. GitHub Actions Workflow to receive the trigger from IFTTT
 
-I create a `.github/workflows/ted-talk-transcript.yaml` workflow which can be triggered manually from the UI or by hitting `https://api.github.com/repos/tumblingpointers/003-clojure-cron-job-github-actions/actions/workflows/ted-talk-transcript.yaml/dispatches`. It needs one input: `talk_title`.
+I created a `.github/workflows/ted-talk-transcript.yaml` workflow that can be triggered manually from the UI or by hitting `https://api.github.com/repos/tumblingpointers/003-clojure-cron-job-github-actions/actions/workflows/ted-talk-transcript.yaml/dispatches`. It needs one input: `talk_title`.
 
 ```yaml
 name: Ted Talk Transcript 🏃
@@ -88,13 +87,13 @@ jobs:
     steps:
       - name: Run
         env:
-          IFTT_API_KEY: ${{ secrets.IFTT_API_KEY }}
+          IFTTT_API_KEY: ${{ secrets.IFTTT_API_KEY }}
         run: clojure -X core/run :job ted-talk-transcript :input '"${{ github.event.inputs.talk_title }}"'
 ```
 
 ### 2. Find the talk on TED.com
 
-Once I have the title of the talk from Youtube, I search for it on `https://www.ted.com/talks` and look through the html to find all links of the pattern `/talks/video-id` using [regex](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions). At the end, I do a `distinct` because each talk has two links in the search results. 
+Once I had the title of the talk from Youtube, I searched for it on `https://www.ted.com/talks` and looked through the html to find all links of the pattern `/talks/video-id` using [regex](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions). Each talk on the search results page has two links so I used `distinct` to get a unique set of video ids.
 
 ```clj
 (def base-url "https://www.ted.com")
@@ -110,7 +109,7 @@ Once I have the title of the talk from Youtube, I search for it on `https://www.
 
 ### 3. Grab the transcript
 
-Using [Inspect network activity](https://developer.chrome.com/docs/devtools/network/) on their [talk videos](https://www.ted.com/talks/dan_finkel_can_you_steal_the_most_powerful_wand_in_the_wizarding_world) I find out that they have a neat [GraphQL](https://graphql.org/) endpoint: <https://www.ted.com/graphql>. All I have to do is to provide the video id to get the transcript back.
+Using [Inspect network activity](https://developer.chrome.com/docs/devtools/network/) on their [talk videos](https://www.ted.com/talks/dan_finkel_can_you_steal_the_most_powerful_wand_in_the_wizarding_world) I found out that they have a neat [GraphQL](https://graphql.org/) endpoint: <https://www.ted.com/graphql>. All I had to do was provide the video id and I got back the entire transcript.
 
 ```clj
 ...
@@ -128,10 +127,56 @@ Using [Inspect network activity](https://developer.chrome.com/docs/devtools/netw
 
 ### 4. Send the transcript to IFTTT
 
-Once I have the transcript, I send it to IFTTT which emails it to me.
+Once I had the transcript, I sent it as JSON payload to IFTTT. IFTTT in turn emails me the transcript but more on this later.
 
 ```clj
-(let [url (str "https://maker.ifttt.com/trigger/email/json/with/key/" (System/getenv "IFTT_API_KEY"))]
+(let [url "https://maker.ifttt.com/trigger/email/json/with/key/IFTTT_API_KEY"]
   (hc/post url {:form-params payload
                 :content-type :json}))
 ```
+
+## We are not done yet
+
+Let's recap what we had to do:
+
+1. Watch out for new talks on [TED's YouTube Channel](https://www.youtube.com/@TED)
+1. Find the talk on the [official website](https://www.ted.com/talks) and grab the transcript
+1. Email it to myself
+
+So far we are done with #2 but we still need to get #1 and #3 done.
+
+### #1 Watch out for new talks
+
+Let's create a IFTTT job for exactly this:
+
+![YouTube Applet Screenshot 1](./assets/youtube-applet-1.png "YouTube Applet Screenshot 1")
+
+![YouTube Applet Screenshot 2](./assets/youtube-applet-2.png "YouTube Applet Screenshot 2")
+
+![YouTube Applet Screenshot 3](./assets/youtube-applet-3.png "YouTube Applet Screenshot 3")
+
+Few things to note:
+
+1. You need a [GitHub Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-personal-access-token-classic) with `repo` access. Replace `ghp_token` in the above screenshot with your token.
+![GitHub Personal Access Token](./assets/github-pat.png "GitHub Personal Access Token")
+1. Remember to add `User-Agent` header ([it won't work otherwise](https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required))
+
+### #3 Email
+
+Let's create a IFTTT applet which emails whatever it receives on the webhook.
+
+![Email Applet Screenshot 1](./assets/email-applet-1.png "Email Applet Screenshot 1")
+
+![Email Applet Screenshot 2](./assets/email-applet-2.png "Email Applet Screenshot 2")
+
+![Email Applet Screenshot 3](./assets/email-applet-3.png "Email Applet Screenshot 3")
+
+## Recap
+
+1. We created a IFTTT applet which watches out for any new TED videos on Youtube. When it finds out about a new video, it sends the talk title to a GitHub endpoint.
+2. On GitHub, a workflow is triggered which receives the talk's title and runs Clojure code to grab its transcript from the TED official website.
+3. Once it has the transcript, it sends it to another IFTTT applet which in turn emails it to me.
+
+As the above example demonstrates, we can use no-code automation tools alongside custom code while avoiding additional cost and maintenance. All of this enables us to get the best of both worlds.
+
+I hope you found article useful, if you have any feedback or ideas for improvement let me know or simply create a PR on the repository 💪

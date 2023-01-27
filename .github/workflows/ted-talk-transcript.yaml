@@ -1,4 +1,4 @@
-name: Ted Talk Transcript 🏃
+name: Ted Talk Transcript 💡
 
 on:
   workflow_dispatch:
@@ -23,5 +23,5 @@ jobs:
           cli: 1.11.1.1208
       - name: Run
         env:
-          IFTT_API_KEY: ${{ secrets.IFTT_API_KEY }}
+          IFTTT_API_KEY: ${{ secrets.IFTTT_API_KEY }}
         run: clojure -X core/run :job ted-talk-transcript :input '"${{ github.event.inputs.talk_title }}"'

@@ -1,15 +1,15 @@
-(ns external.iftt
+(ns external.ifttt
   (:require [hato.client :as hc]))
 
 (def base-url "https://maker.ifttt.com/trigger/")
 
-(def api-key (System/getenv "IFTT_API_KEY"))
+(def api-key (System/getenv "IFTTT_API_KEY"))
 
-(defn trigger-iftt
+(defn trigger-ifttt
   [event-name payload]
   (let [url (str base-url event-name "/json/with/key/" api-key)]
     (hc/post url {:form-params payload
                   :content-type :json})))
 
 (comment
-  (trigger-iftt "ted_transcript" {:random "asdf"}))
+  (trigger-ifttt "email" {:random "asdf"}))

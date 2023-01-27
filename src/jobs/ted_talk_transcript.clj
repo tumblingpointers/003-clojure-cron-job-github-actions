@@ -2,7 +2,7 @@
   (:require [hato.client :as hc]
             [cheshire.core :as cheshire]
             [clojure.string :as string]
-            [external.iftt :refer [trigger-iftt]]))
+            [external.ifttt :refer [trigger-ifttt]]))
 
 (def base-url "https://www.ted.com")
 
@@ -33,19 +33,22 @@
         paragraphs (map #(map :text %) paragraphs)]
     (map #(string/join " " %) paragraphs)))
 
-(defn- remove-suffix-if-exists
+(defn- prune-title
   [str]
-  (string/replace str #"(.*) \| TED" "$1"))
+  (-> str
+      (string/split #"\|")
+      first
+      string/trim))
 
 (defn run
   [query]
-  (let [query          (remove-suffix-if-exists query)
+  (let [query          (prune-title query)
         talk-video-ids (search-talks query)]
     (some->> talk-video-ids
              first
              get-transcript
-             (trigger-iftt "ted_transcript")
+             (trigger-ifttt "email")
              :body)))
 
 (comment
-  (run "A Socialist Perspective on the Pursuit of Happiness | Aaron Bastani | TED"))
+  (run "7 New Species of Robot That Jump, Dance – and Walk on Water | Dennis Hong | TED"))
