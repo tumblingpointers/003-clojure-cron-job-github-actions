@@ -1,7 +1,11 @@
-(ns core)
+(ns core
+  (:require [jobs.ted-talk-transcript :as ted-talk-transcript]))
 
 (defn plus [a b]
   (+ a b))
 
-(defn run [opts]
-  (println "Hello world, the sum of 2 and 2 is" (plus 2 2)))
+(defn run [{:keys [job input]}]
+  (println "Running job" job)
+  (case (str job)
+    "ted-talk-transcript" (ted-talk-transcript/run input)
+    "default"))

@@ -1,4 +1,4 @@
-# Getting hands dirty with Clojure and GitHub Actions for Personal Automation
+# Getting hands dirty with Clojure, GitHub Actions and IFTT Webhooks for Personal Automation
 
 As a software engineer, I cannot help but think of making my life more efficient. These are a few recent ideas I have had:
   - As my salary arrives, transfer it to different accounts based on a pre-set allocation
@@ -6,7 +6,25 @@ As a software engineer, I cannot help but think of making my life more efficient
   - Update workout plans with new weights according to a progression plan
   - Send me tweets with more than 100 likes from last week from people I follow
 
-As writing code is not just about writing code but also about deploying, running and maintaining it I have avoided it so far. Usually I try to make do with existing tools like Apple Shortcuts, Apple Home or IFTT.
+When it comes to actually implementing these ideas, the choice is to either use existing automation tools like [IFTT](https://ifttt.com/) or write my own scripts. Tools like IFTT are great because they are easy to use and well-integrated with thousands of [services](https://ifttt.com/explore/services) but they lack the flexibility you can achieve with your own code - maybe you want to process data in a certain way or talk to an unsupported API?
+
+On the other hand, writing code is not just about writing code but also about deploying, running and maintaining it. Plus, now you have to write code for every service yourself (even the ones supported by IFTT).
+
+Is there a way where we can get the best of both worlds?
+
+1. Make use of [existing integrations](https://ifttt.com/explore/services)
+1. Write custom code when necessary
+1. Painless code maintenance/management
+1. Free deployment
+
+This article covers how we can achieve exactly that using [GitHub](https://github.com/), [GitHub Actions](https://github.com/features/actions) and [IFTT Webhooks](https://ifttt.com/maker_webhooks).
+
+I wanted to cover a usecase that involves both IFTT and custom code.
+
+## Whenever a new TED video comes out on Youtube, email me it's transcript
+
+I will be using [Clojure](https://clojure.org/).
+
 However, recently I started thinking of ways to make self-written automation easier. Let's summarize the objectives:
 
 1. Concise and easy-to-maintain code
