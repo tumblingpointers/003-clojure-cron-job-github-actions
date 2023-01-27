@@ -1,4 +1,4 @@
-# Getting hands dirty with Clojure, GitHub Actions and IFTT Webhooks for Personal Automation
+# Getting hands dirty with Clojure, GitHub Actions and IFTTT Webhooks for Personal Automation
 
 As a software engineer, I cannot help but think of making my life more efficient. These are a few recent ideas I have had:
   - As my salary arrives, transfer it to different accounts based on a pre-set allocation
@@ -6,9 +6,9 @@ As a software engineer, I cannot help but think of making my life more efficient
   - Update workout plans with new weights according to a progression plan
   - Send me tweets with more than 100 likes from last week from people I follow
 
-When it comes to actually implementing these ideas, the choice is to either use existing automation tools like [IFTT](https://ifttt.com/) or write my own scripts. Tools like IFTT are great because they are easy to use and well-integrated with thousands of [services](https://ifttt.com/explore/services) but they lack the flexibility you can achieve with your own code - maybe you want to process data in a certain way or talk to an unsupported API?
+When it comes to actually implementing these ideas, the choice is to either use existing automation tools like [IFTTT](https://ifttt.com/) or write my own scripts. Tools like IFTTT are great because they are easy to use and well-integrated with thousands of [services](https://ifttt.com/explore/services) but they lack the flexibility you can achieve with your own code - maybe you want to process data in a certain way or talk to an unsupported API?
 
-On the other hand, writing code is not just about writing code but also about deploying, running and maintaining it. Plus, now you have to write code for every service yourself (even the ones supported by IFTT).
+On the other hand, writing code is not just about writing code but also about deploying, running and maintaining it. Plus, now you have to write code for every service yourself (even the ones supported by IFTTT).
 
 Is there a way where we can get the best of both worlds?
 
@@ -17,150 +17,121 @@ Is there a way where we can get the best of both worlds?
 1. Painless code maintenance/management
 1. Free deployment
 
-This article covers how we can achieve exactly that using [GitHub](https://github.com/), [GitHub Actions](https://github.com/features/actions) and [IFTT Webhooks](https://ifttt.com/maker_webhooks).
+This article covers how we can achieve exactly that.
 
-I wanted to cover a usecase that involves both IFTT and custom code.
+## Email me transcripts of new TED Talks
 
-## Whenever a new TED video comes out on Youtube, email me it's transcript
+For my usecase, I will be implementing this idea I had about turning new [TED](https://www.ted.com/) videos into text so I can read them instead of taking out the time to watch them. This is the plan:
 
-I will be using [Clojure](https://clojure.org/).
+1. Watch out for new talks on their [YouTube Channel](https://www.youtube.com/@TED)
+1. Find the talk on the [official website](https://www.ted.com/talks) and grab the transcript
+1. Email it to myself
 
-However, recently I started thinking of ways to make self-written automation easier. Let's summarize the objectives:
+*Note: We could also grab the transcript from the Youtube video itself but that requires setting up a [Google Developer](https://developers.google.com/youtube/v3) account. Talking to the TED website is much easier.*
 
-1. Concise and easy-to-maintain code
-1. Zero-cost
-1. No self-maintained servers
+[IFTTT](https://ifttt.com/) has integrations which make #1 and #3 a piece of cake but nothing to help us with #2. This is a problem no-code approaches run into often - so how do we fill this gap?
 
-I am pretty sure there are many solutions to this but this is what I came up with:
+## Just Code It
 
-1. Maintain a public repository for the code -> Motivates me to write readable code as people might see it
-1. Write code in Clojure -> Clojure is concise and I like to use it
-1. GitHub Actions to run code -> Free for Public Repositories and I can schedule daily/weekly runs
-1. Keep all automation code in one repository -> Easy to maintain
+I know right, just code whatever is missing? Exactly but then we run into two problems:
 
-Let's get started.
+### 1. How do we plug it into IFTTT?
 
-## 1. Setup a Clojure Project
+Well, all we need is some way of triggering our code when IFTTT is done and some way of letting IFTTT know when our code is done. That is exactly what their [webhooks](https://ifttt.com/maker_webhooks) help with. Similar functionality exists in [Zapier](https://zapier.com/page/webhooks/) and [Apple Shortcuts](https://support.apple.com/en-hk/guide/shortcuts/apd58d46713f/ios) so we can mix our code with other tools too.
 
-### 1.1 Installing Clojure
+### 2. Where do we run it?
 
-First things first, let's install `clojure` locally. For [Windows Subsytem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install), this is what I ran. You can find instructions for your specific system at [Install Clojure](https://clojure.org/guides/install_clojure).
+Writing code is just a piece of the puzzle. Maintaining, deploying and running it is where it gets trickier. Here are a few options:
 
-```sh
-sudo apt-get update
-sudo apt install openjdk-17-jre-headless
-sudo apt install rlwrap
-curl -O https://download.clojure.org/install/linux-install-1.11.1.1208.sh && chmod +x linux-install-1.11.1.1208.sh
-sudo ./linux-install-1.11.1.1208.sh
-rm ./linux-install-1.11.1.1208.sh
-```
+- Run it on your PC
+- Buy a [virtual machine](https://www.digitalocean.com/products/droplets) and run it there
+- Run it [serverless](https://aws.amazon.com/lambda/) somewhere
 
-### 1.2 Basic Structure
+In addition to costing money, the above options require even more code depending on whether you decide to build any of the following:
 
-1. Let's start with [.gitignore](./.gitignore) so we don't commit files we don't need to. (You can find it)
-2. To manage our project, we will use the default [Clojure CLI Tools](https://clojure.org/guides/deps_and_cli). To do that we need to create a basic `deps.edn` file in the root:
+- a server to receive triggers
+- authentication/authorization
+- continuous deployment
 
-```clj
-{:deps {org.clojure/clojure {:mvn/version "1.11.1"}}
- :aliases {:dev {:extra-paths ["test"]}
-           ;; clj -X:test-runner
-           :test-runner {:extra-paths ["test"]
-                         :extra-deps {io.github.cognitect-labs/test-runner
-                                      {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
-                         :main-opts ["-m" "cognitect.test-runner"]
-                         :exec-fn cognitect.test-runner.api/test}}}
-```
+All this to say that there is a solution: [GitHub Actions](https://github.com/features/actions)
 
-So far we have defined our dependencies (just Clojure for now) and two [aliases](https://practical.li/blog-staging/posts/clojure-cli-tools-understanding-aliases) which will come in handy during development and tests. `dev` alias helps us load the `test` directory during development and `test-runner` helps us run all the tests in our project.
+If you haven't heard of it or [similar solutions](https://docs.gitlab.com/ee/ci/pipelines/) before, these are workflows that run in your `git` repository and can be [triggered](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows) in all sorts of ways. Common usecases involve testing, building and deploying code but the possibilities are endless.
 
-3. Time to add some code. Let's start with `src/core.clj`:
-```clj
-(ns core)
+All we need to do is write a `workflow` which starts when `https://api.github.com/repos/tumblingpointers/003-clojure-cron-job-github-actions/actions/workflows/{workflow-id}/dispatches` is hit. Inside the workflow, we can run our custom code and hit IFTTT when we are done.
 
-(defn plus [a b]
-  (+ a b))
+For personal use, the [usage limits](https://docs.github.com/en/billing/managing-billing-for-github-actions/about-billing-for-github-actions#included-storage-and-minutes) are more than enough so we essentially have an easy way of running our code for free. 🥳
 
-(defn run [opts]
-  (println "Hello world, the sum of 2 and 2 is" (plus 2 2)))
-```
+## Back to TED
 
-And now a basic test `test/core_test.clj`:
-```clj
-(ns core-test
-  (:require [clojure.test :refer [is deftest]]
-            [core :refer [plus]]))
+Let's get our hands dirty and actually code it out. We will start with the custom code as we need a workflow url before we can ask IFTTT to hit it.
 
-(deftest adding-numbers
-  (is (= 4 (plus 2 2))))
-```
+We can use any language we want for this part - personally I prefer Clojure for scripts as it's concise and a delight to use.
 
-To test that everything above works properly try the following two commands:
-```clj
-clj -X:test-runner
-; ...
-; Ran 1 tests containing 1 assertions.
-; ...
-clj -X core/run
-; Hello world, the sum of 2 and 2 is 4
-```
+I won't go into a lot of details but these are the key parts:
 
-### 1.3 Local Development
+### 1. GitHub Actions Workflow to receive the trigger from IFTTT
 
-Personally, I use [VSCode with the Calva Extension](https://clojure.org/guides/editors#_vs_code_rapidly_evolving_beginner_friendly) for local development but you can have your pick from the several options [suggested here](https://clojure.org/guides/editors).
+I create a `.github/workflows/ted-talk-transcript.yaml` workflow which can be triggered manually from the UI or by hitting `https://api.github.com/repos/tumblingpointers/003-clojure-cron-job-github-actions/actions/workflows/ted-talk-transcript.yaml/dispatches`. It needs one input: `talk_title`.
 
-
-## 2. Setup GitHub Actions
-
-Now that we have a basic project set up, let's setup some basic GitHub actions.
-
-### 2.1 Test on Push
-
-To start with, let's add a workflow to run tests everytime we push to master. Create a file `.github/workflows/test.yaml`:
 ```yaml
-name: Test 🧪
+name: Ted Talk Transcript 🏃
 
-on: [push]
+on:
+  workflow_dispatch:
+    inputs:
+      talk_title:
+        description: Title of the TED Talk
+        required: true
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  ted-talk-transcript:
     steps:
-      - uses: actions/checkout@v3
-      - name: Prepare Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-      - name: Prepare Clojure
-        uses: DeLaGuardo/setup-clojure@10.1
-        with:
-          cli: 1.11.1.1208
-      - name: Run Tests
-        run: clojure -X:test-runner
-```
-
-### 2.2 Manual Trigger
-
-It might be useful to trigger jobs manually. Let's add a workflow that we can trigger from the GitHub UI which outputs our `hello world`. Create a file `.github/workflow/manual.yaml`:
-```yaml
-name: Manual 🏃
-
-on: [workflow_dispatch]
-
-jobs:
-  manual:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Prepare Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-      - name: Prepare Clojure
-        uses: DeLaGuardo/setup-clojure@10.1
-        with:
-          cli: 1.11.1.1208
       - name: Run
-        run: clojure -X core/run
+        env:
+          IFTT_API_KEY: ${{ secrets.IFTT_API_KEY }}
+        run: clojure -X core/run :job ted-talk-transcript :input '"${{ github.event.inputs.talk_title }}"'
+```
+
+### 2. Find the talk on TED.com
+
+Once I have the title of the talk from Youtube, I search for it on `https://www.ted.com/talks` and look through the html to find all links of the pattern `/talks/video-id` using [regex](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions). At the end, I do a `distinct` because each talk has two links in the search results. 
+
+```clj
+(def base-url "https://www.ted.com")
+
+(defn- search-talks [query]
+  (let [query-url   (str base-url "/talks?sort=relevance&q=" query)
+        results     (-> (hc/get query-url)
+                        :body)
+        links       (re-seq #"/talks/(.*)'" results)
+        video-ids   (distinct (map second links))]
+    video-ids))
+```
+
+### 3. Grab the transcript
+
+Using [Inspect network activity](https://developer.chrome.com/docs/devtools/network/) on their [talk videos](https://www.ted.com/talks/dan_finkel_can_you_steal_the_most_powerful_wand_in_the_wizarding_world) I find out that they have a neat [GraphQL](https://graphql.org/) endpoint: <https://www.ted.com/graphql>. All I have to do is to provide the video id to get the transcript back.
+
+```clj
+...
+  (let [gql (str "{translation(language:\"en\", videoId:\""
+                 video-id
+                 "\") {id paragraphs { cues { text }}}}")
+        response (hc/post (str base-url "/graphql") {:form-params {:operationName nil
+                                                                   :query gql}
+                                                     :content-type :json})
+        json (-> response
+                 :body
+                 (cheshire/parse-string true))
+...
+```
+
+### 4. Send the transcript to IFTTT
+
+Once I have the transcript, I send it to IFTTT which emails it to me.
+
+```clj
+(let [url (str "https://maker.ifttt.com/trigger/email/json/with/key/" (System/getenv "IFTT_API_KEY"))]
+  (hc/post url {:form-params payload
+                :content-type :json}))
 ```
